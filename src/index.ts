@@ -1,5 +1,9 @@
+import {Octokit} from '@octokit/rest';
+import {OctokitResponse, ReposGetResponseData} from '@octokit/types';
+
 require('dotenv').config();
-const {Octokit} = require('@octokit/rest');
+
+// type ListUserReposResponse = Endpoints['GET /repos/:owner/:repo']['response'];
 
 const DEBUG = process.env.DEBUG === 'true';
 if (DEBUG) {
@@ -33,8 +37,8 @@ interface DockerHubWebhookData {
 	const {
 		data
 	} = await octokit.repos.get({
-		owner: "SirCremefresh",
-		repo: "bmw12-cluster",
-	});
-	console.log(data)
+		owner: 'SirCremefresh',
+		repo: 'bmw12-cluster',
+	}) as OctokitResponse<ReposGetResponseData>;
+	console.log(data);
 })();
