@@ -16,5 +16,5 @@ RUN npm ci --only=production
 COPY --from=builder /usr/src/app/dist /usr/src/app/dist
 
 EXPOSE 8080
-ENTRYPOINT [ "node", "dist/index.js" ]
+CMD [ "node", "dist/index.js" ]
 
