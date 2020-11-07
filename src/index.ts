@@ -139,7 +139,7 @@ function updateImageInProject(project: Project, imageName: string, imageTag: str
   return project;
 }
 
-function executeCommand(command) {
+function executeCommand(command: string) {
   return new Promise((res, rej) => {
     exec(command, (error, stdout, stderr) => {
       if (error) {
