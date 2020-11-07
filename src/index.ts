@@ -1,9 +1,10 @@
 import {Octokit} from '@octokit/rest';
-import {OctokitResponse, PullsListResponseData, ReposGetResponseData} from '@octokit/types';
+import {OctokitResponse, PullsListResponseData, ReposGetBranchResponseData, ReposGetResponseData} from '@octokit/types';
 import {program} from 'commander';
 import {readdirSync, readFile} from 'fs';
 import yaml from 'js-yaml';
 import path from 'path';
+import simpleGit, {SimpleGit, SimpleGitOptions} from 'simple-git';
 
 require('dotenv').config();
 
@@ -52,7 +53,7 @@ const dockerHubWebhookData = parseInput();
 
 console.log(dockerHubWebhookData);
 
-
+const GIT_PROJECT_BASE = './workspace/bmw12-cluster/';
 const DEBUG = process.env.DEBUG === 'true';
 if (DEBUG) {
 	console.debug('Debug logging is enabled');
@@ -70,6 +71,26 @@ const octokit = new Octokit({
 	auth: GITHUB_AUTH_TOKEN
 });
 
+const options: SimpleGitOptions = {
+	baseDir: GIT_PROJECT_BASE,
+	binary: 'git',
+	maxConcurrentProcesses: 6,
+};
+
+const git: SimpleGit = simpleGit(options);
+
+//
+// master - Deployed
+// update/sample-application - Fork von Master
+// push
+//
+
+//
+// git checkout update/sample-application
+// git merge master
+// updates
+// git push
+//
 
 // octokit.pulls.list({
 // 	owner,
@@ -116,12 +137,38 @@ function filterProjectsWithImage(projects: Project[], imageName: string) {
 	});
 }
 
+async function doesRepoHaveBranch(branchName: string): Promise<boolean> {
+	try {
+		const branch = await octokit.repos.getBranch({
+			owner: 'SirCremefresh',
+			repo: 'bmw12-cluster',
+			branch: branchName
+		}) as OctokitResponse<ReposGetBranchResponseData>;
+		return true;
+	} catch (e) {
+		if (e.status === 404)
+			return false;
+		throw e;
+	}
+
+}
+
 (async () => {
 	try {
 		const projects = await readAllProjectConfigurations();
-		// console.log(JSON.stringify(projects));
 		const projectsWithChangedImage = filterProjectsWithImage(projects, dockerHubWebhookData.imageName);
-		console.log(projectsWithChangedImage)
+
+		for (const project of projectsWithChangedImage) {
+			const branchName = `update/${project.name}`;
+			// if (await doesRepoHaveBranch(branchName)) {
+			// 	await git.deleteLocalBranch(branchName);
+			// }
+			// await git.checkoutLocalBranch(branchName);
+			//
+			console.log(await git.raw('push','origin', 'master'));
+			// await git.push('origin master');
+		}
+
 		// const pullRequests = await getOpenPullRequests();
 		// // const pullRequest = pullRequests.find(pullRequest => pullRequest.head.ref === dockerHubWebhookData)
 		//
