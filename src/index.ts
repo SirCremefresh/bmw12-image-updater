@@ -1,3 +1,4 @@
+import {exec} from 'child_process';
 import {program} from 'commander';
 import {readdirSync, readFile, writeFile} from 'fs';
 import yaml from 'js-yaml';
@@ -14,7 +15,9 @@ interface DockerHubWebhookData {
   name: string,
   namespace: string,
   owner: string,
-  workspacePath: string
+  workspacePath: string,
+  gitEmail: string,
+  gitName: string
 }
 
 interface Project {
@@ -41,7 +44,9 @@ function parseInput(): DockerHubWebhookData {
     .requiredOption('--name <value>', 'name')
     .requiredOption('--namespace <value>', 'namespace')
     .requiredOption('--owner <value>', 'owner')
-    .requiredOption('--workspace-path <value>', 'workspacePath');
+    .requiredOption('--workspace-path <value>', 'workspacePath')
+    .requiredOption('--git-email <value>', 'gitEmail')
+    .requiredOption('--git-name <value>', 'gitName');
 
   program.parse(process.argv);
   const opts = program.opts();
@@ -53,7 +58,9 @@ function parseInput(): DockerHubWebhookData {
     name: opts.name,
     namespace: opts.namespace,
     owner: opts.owner,
-    workspacePath: opts.workspacePath
+    workspacePath: opts.workspacePath,
+    gitEmail: opts.gitEmail,
+    gitName: opts.gitName
   };
 }
 
@@ -132,10 +139,28 @@ function updateImageInProject(project: Project, imageName: string, imageTag: str
   return project;
 }
 
+function executeCommand(command) {
+  return new Promise((res, rej) => {
+    exec(command, (error, stdout, stderr) => {
+      if (error) {
+        rej(error.message);
+      } else if (stderr) {
+        rej(stderr);
+      } else {
+        res(stdout);
+      }
+    });
+  });
+}
+
 (async () => {
   try {
     const projects = await readAllProjectConfigurations();
     const projectsWithChangedImage = filterProjectsWithImage(projects, dockerHubWebhookData.imageName);
+
+    await executeCommand(`git config --global user.email "${dockerHubWebhookData.gitEmail}"`);
+    await executeCommand(`git config --global user.name "${dockerHubWebhookData.gitName}"`);
+    await git.checkoutLocalBranch('master');
 
     for (const project of projectsWithChangedImage) {
       console.log(`Updating image in Project: ${project.projectData.name}`);
