@@ -14,6 +14,7 @@ interface DockerHubWebhookData {
   name: string,
   namespace: string,
   owner: string,
+  workspacePath: string
 }
 
 interface Project {
@@ -32,7 +33,8 @@ function parseInput(): DockerHubWebhookData {
     .requiredOption('--tag <value>', 'tag')
     .requiredOption('--name <value>', 'name')
     .requiredOption('--namespace <value>', 'namespace')
-    .requiredOption('--owner <value>', 'owner');
+    .requiredOption('--owner <value>', 'owner')
+    .requiredOption('--workspace-path <value>', 'workspacePath');
 
   program.parse(process.argv);
   const opts = program.opts();
@@ -43,20 +45,22 @@ function parseInput(): DockerHubWebhookData {
     tag: opts.tag,
     name: opts.name,
     namespace: opts.namespace,
-    owner: opts.owner
+    owner: opts.owner,
+    workspacePath: opts.workspacePath
   };
 }
 
 const dockerHubWebhookData = parseInput();
 
-const GIT_PROJECT_BASE = './workspace/bmw12-cluster/';
 const DEBUG = process.env.DEBUG === 'true';
 if (DEBUG) {
   console.debug('Debug logging is enabled');
 }
 
+console.log(`Starting with options: ${JSON.stringify(dockerHubWebhookData)}`);
+
 const options: SimpleGitOptions = {
-  baseDir: GIT_PROJECT_BASE,
+  baseDir: dockerHubWebhookData.workspacePath,
   binary: 'git',
   maxConcurrentProcesses: 6,
 };
@@ -64,7 +68,7 @@ const options: SimpleGitOptions = {
 const git: SimpleGit = simpleGit(options);
 
 async function readAllProjectConfigurations(): Promise<Project[]> {
-  const workspaceLocation = './workspace/bmw12-cluster/apps';
+  const workspaceLocation = `${dockerHubWebhookData.workspacePath}/apps`;
   const dirNames = readdirSync(workspaceLocation, {withFileTypes: true})
     .filter(dir => dir.isDirectory())
     .map(dir => dir.name);
@@ -115,7 +119,7 @@ function updateImageInProject(project: Project, imageName: string, imageTag: str
       const updateProject = updateImageInProject(project, dockerHubWebhookData.imageName, dockerHubWebhookData.tag);
 
 
-      console.log(updateProject)
+      console.log(updateProject);
     }
   } catch (e) {
     console.log(e);
