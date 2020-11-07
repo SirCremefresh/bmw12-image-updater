@@ -19,6 +19,7 @@ interface DockerHubWebhookData {
 
 interface Project {
   fileName: string,
+  dirName: string,
   projectData: ProjectData
 }
 
@@ -82,13 +83,13 @@ async function readAllProjectConfigurations(): Promise<Project[]> {
     .map(dir => dir.name);
 
   return await Promise.all(dirNames.map(dirName => {
-    return loadProjectFromFile(path.join(workspaceLocation, dirName, CONFIG_FILE_NAME));
+    return loadProjectFromFile(path.join(workspaceLocation, dirName, CONFIG_FILE_NAME), dirName);
   }));
 }
 
-async function loadProjectFromFile(fileName: string): Promise<Project> {
+async function loadProjectFromFile(fileName: string, dirName: string): Promise<Project> {
   const data = await readUtf8File(fileName);
-  return {fileName: fileName, projectData: yaml.safeLoad(data) as ProjectData};
+  return {fileName, dirName, projectData: yaml.safeLoad(data) as ProjectData};
 }
 
 async function writeProjectToFile(project: Project): Promise<void> {
@@ -140,13 +141,11 @@ function updateImageInProject(project: Project, imageName: string, imageTag: str
       console.log(`Updating image in Project: ${project.projectData.name}`);
       const updateProject = updateImageInProject(project, dockerHubWebhookData.imageName, dockerHubWebhookData.tag);
 
-      console.log(updateProject);
       await writeProjectToFile(updateProject);
-      console.log(updateProject);
 
-      git.add(project.fileName);
-      git.commit(`Updating project: ${project.projectData.name}, imageTag: ${dockerHubWebhookData.tag}, imageName: ${dockerHubWebhookData.imageName}`)
-      git.push();
+      await git.add(path.join('apps', project.dirName, CONFIG_FILE_NAME));
+      await git.commit(`Updating project: ${project.projectData.name}, imageTag: ${dockerHubWebhookData.tag}, imageName: ${dockerHubWebhookData.imageName}`);
+      await git.push();
     }
   } catch (e) {
     console.log(e);
