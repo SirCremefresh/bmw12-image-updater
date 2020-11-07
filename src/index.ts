@@ -170,7 +170,7 @@ function executeCommand(command: string) {
 
       await git.add(path.join('apps', project.dirName, CONFIG_FILE_NAME));
       await git.commit(`Updating project: ${project.projectData.name}, imageTag: ${dockerHubWebhookData.tag}, imageName: ${dockerHubWebhookData.imageName}`);
-      await git.push();
+      await git.push('origin', 'master');
     }
   } catch (e) {
     console.log(e);
