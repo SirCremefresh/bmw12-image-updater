@@ -140,9 +140,13 @@ function updateImageInProject(project: Project, imageName: string, imageTag: str
       console.log(`Updating image in Project: ${project.projectData.name}`);
       const updateProject = updateImageInProject(project, dockerHubWebhookData.imageName, dockerHubWebhookData.tag);
 
-      await writeProjectToFile(updateProject)
-
       console.log(updateProject);
+      await writeProjectToFile(updateProject);
+      console.log(updateProject);
+
+      git.add(project.fileName);
+      git.commit(`Updating project: ${project.projectData.name}, imageTag: ${dockerHubWebhookData.tag}, imageName: ${dockerHubWebhookData.imageName}`)
+      git.push();
     }
   } catch (e) {
     console.log(e);
