@@ -1,4 +1,4 @@
-import {readFile, writeFile} from 'fs';
+import {readdirSync, readFile, writeFile} from 'fs';
 
 export function readUtf8File(file: string): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -18,4 +18,10 @@ export function writeUtf8File(file: string, data: string): Promise<string> {
       resolve();
     });
   });
+}
+
+export function findSubFolders(folderPath: string): string[] {
+  return readdirSync(folderPath, {withFileTypes: true})
+    .filter(dir => dir.isDirectory())
+    .map(dir => dir.name);
 }

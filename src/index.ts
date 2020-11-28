@@ -1,12 +1,11 @@
 import {program} from 'commander';
-import {readdirSync} from 'fs';
 import yaml from 'js-yaml';
 import path from 'path';
 import simpleGit, {SimpleGit, SimpleGitOptions} from 'simple-git';
 import {Project, ProjectData} from './project.type';
 import {UpdateImageOptions} from './update-image-options.type';
 import {executeCommand} from './utils/execute-utils';
-import {readUtf8File, writeUtf8File} from './utils/file-utils';
+import {findSubFolders, readUtf8File, writeUtf8File} from './utils/file-utils';
 
 require('dotenv').config();
 
@@ -40,17 +39,17 @@ function parseInput(): UpdateImageOptions {
   };
 }
 
-const dockerHubWebhookData = parseInput();
+const updateImageOptions = parseInput();
 
 const DEBUG = process.env.DEBUG === 'true';
 if (DEBUG) {
   console.debug('Debug logging is enabled');
 }
 
-console.log(`Starting with options: ${JSON.stringify(dockerHubWebhookData)}`);
+console.log(`Starting with options: ${JSON.stringify(updateImageOptions)}`);
 
 const options: SimpleGitOptions = {
-  baseDir: dockerHubWebhookData.workspacePath,
+  baseDir: updateImageOptions.workspacePath,
   binary: 'git',
   maxConcurrentProcesses: 6,
 };
@@ -59,11 +58,9 @@ const git: SimpleGit = simpleGit(options);
 const CONFIG_FILE_NAME = 'bmw12-application.yaml';
 
 
-async function readAllProjectConfigurations(): Promise<Project[]> {
-  const workspaceLocation = `${dockerHubWebhookData.workspacePath}/apps`;
-  const dirNames = readdirSync(workspaceLocation, {withFileTypes: true})
-    .filter(dir => dir.isDirectory())
-    .map(dir => dir.name);
+async function readAllProjectConfigurations(workspacePath: string): Promise<Project[]> {
+  const workspaceLocation = `${workspacePath}/apps`;
+  const dirNames = findSubFolders(workspaceLocation);
 
   return await Promise.all(dirNames.map(dirName => {
     return loadProjectFromFile(path.join(workspaceLocation, dirName, CONFIG_FILE_NAME), dirName);
@@ -97,24 +94,25 @@ function updateImageInProject(project: Project, imageName: string, imageTag: str
 
 (async () => {
   try {
-    const projects = await readAllProjectConfigurations();
-    const projectsWithChangedImage = filterProjectsWithImage(projects, dockerHubWebhookData.imageName);
+    const projects = await readAllProjectConfigurations(updateImageOptions.workspacePath);
+    const projectsWithChangedImage = filterProjectsWithImage(projects, updateImageOptions.imageName);
 
-    await executeCommand(`git config --global user.email "${dockerHubWebhookData.gitEmail}"`);
-    await executeCommand(`git config --global user.name "${dockerHubWebhookData.gitName}"`);
+    await executeCommand(`git config --global user.email "${updateImageOptions.gitEmail}"`);
+    await executeCommand(`git config --global user.name "${updateImageOptions.gitName}"`);
     await git.checkoutLocalBranch('master');
 
     for (const project of projectsWithChangedImage) {
       console.log(`Updating image in Project: ${project.projectData.name}`);
-      const updateProject = updateImageInProject(project, dockerHubWebhookData.imageName, dockerHubWebhookData.tag);
+      const updateProject = updateImageInProject(project, updateImageOptions.imageName, updateImageOptions.tag);
 
       await writeProjectToFile(updateProject);
 
       await git.add(path.join('apps', project.dirName, CONFIG_FILE_NAME));
-      await git.commit(`Updating project: ${project.projectData.name}, imageTag: ${dockerHubWebhookData.tag}, imageName: ${dockerHubWebhookData.imageName}`);
+      await git.commit(`Updating project: ${project.projectData.name}, imageTag: ${updateImageOptions.tag}, imageName: ${updateImageOptions.imageName}`);
       await git.push('origin', 'master');
     }
   } catch (e) {
     console.log(e);
+    throw e;
   }
 })();
