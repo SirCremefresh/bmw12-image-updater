@@ -1,7 +1,7 @@
 import test from 'ava';
 import {mkdirSync} from 'fs';
 import path from 'path';
-import {findSubFolders, readUtf8File, writeUtf8File} from './file-utils';
+import {findSubFolders, getLastFolder, readUtf8File, writeUtf8File} from './file-utils';
 import {tmpDir, tmpFile} from './testing-utils';
 
 test('Test read and write file', async t => {
@@ -34,4 +34,8 @@ test.only('Test find subFolders empty', async t => {
 test.only('Test find subFolders folder not exists', async t => {
   const dirPath = tmpDir();
   await t.throwsAsync(async () => await findSubFolders(dirPath));
+});
+
+test.only('Test get last folder name', t => {
+  t.is(getLastFolder("/la/apps/some-project/project.yaml"), "some-project");
 });
