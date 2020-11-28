@@ -1,12 +1,6 @@
 import test from 'ava';
-import Crypto from 'crypto';
-import {tmpdir} from 'os';
-import Path from 'path';
 import {readUtf8File, writeUtf8File} from './file-utils';
-
-function tmpFile() {
-  return Path.join(tmpdir(), `${Crypto.randomBytes(6).readUIntLE(0, 6).toString(36)}.tmp`);
-}
+import {tmpFile} from './testing-utils';
 
 test('Test read and write file', async t => {
   const filePath = tmpFile();

@@ -1,12 +1,12 @@
-import {exec} from 'child_process';
 import {program} from 'commander';
 import {readdirSync} from 'fs';
 import yaml from 'js-yaml';
 import path from 'path';
 import simpleGit, {SimpleGit, SimpleGitOptions} from 'simple-git';
-import {readUtf8File, writeUtf8File} from './file-utils';
 import {Project, ProjectData} from './project.type';
 import {UpdateImageOptions} from './update-image-options.type';
+import {executeCommand} from './utils/execute-utils';
+import {readUtf8File, writeUtf8File} from './utils/file-utils';
 
 require('dotenv').config();
 
@@ -93,20 +93,6 @@ function updateImageInProject(project: Project, imageName: string, imageTag: str
     project.projectData.images[key].tag = imageTag;
   }
   return project;
-}
-
-function executeCommand(command: string) {
-  return new Promise((res, rej) => {
-    exec(command, (error, stdout, stderr) => {
-      if (error) {
-        rej(error.message);
-      } else if (stderr) {
-        rej(stderr);
-      } else {
-        res(stdout);
-      }
-    });
-  });
 }
 
 (async () => {
