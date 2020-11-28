@@ -1,40 +1,16 @@
 import {exec} from 'child_process';
 import {program} from 'commander';
-import {readdirSync, readFile, writeFile} from 'fs';
+import {readdirSync} from 'fs';
 import yaml from 'js-yaml';
 import path from 'path';
 import simpleGit, {SimpleGit, SimpleGitOptions} from 'simple-git';
+import {readUtf8File, writeUtf8File} from './file-utils';
+import {Project, ProjectData} from './project.type';
+import {UpdateImageOptions} from './update-image-options.type';
 
 require('dotenv').config();
 
-interface DockerHubWebhookData {
-  callbackUrl: string,
-  repoUrl: string,
-  imageName: string,
-  tag: string,
-  name: string,
-  namespace: string,
-  owner: string,
-  workspacePath: string,
-  gitEmail: string,
-  gitName: string
-}
-
-interface Project {
-  fileName: string,
-  dirName: string,
-  projectData: ProjectData
-}
-
-interface ProjectData {
-  name: string,
-  dirName: string,
-  images: {
-    [key: string]: { name: string, tag: string }
-  }
-}
-
-function parseInput(): DockerHubWebhookData {
+function parseInput(): UpdateImageOptions {
   program
     .storeOptionsAsProperties(false)
     .requiredOption('--callback-url <value>', 'callbackUrl')
@@ -101,26 +77,6 @@ async function loadProjectFromFile(fileName: string, dirName: string): Promise<P
 
 async function writeProjectToFile(project: Project): Promise<void> {
   await writeUtf8File(project.fileName, yaml.safeDump(project.projectData));
-}
-
-function readUtf8File(file: string): Promise<string> {
-  return new Promise((resolve, reject) => {
-    readFile(file, {encoding: 'utf8'}, (err, data) => {
-      if (err)
-        reject(err);
-      resolve(data);
-    });
-  });
-}
-
-function writeUtf8File(file: string, data: string): Promise<string> {
-  return new Promise((resolve, reject) => {
-    writeFile(file, data, {encoding: 'utf8'}, (err) => {
-      if (err)
-        reject(err);
-      resolve();
-    });
-  });
 }
 
 function filterProjectsWithImage(projects: Project[], imageName: string) {
